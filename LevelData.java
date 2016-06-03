@@ -1,9 +1,5 @@
-package application;
+package com.gluonapplication;
 
-/**
- * Класс содержит карты различных уровней
- * @author pixxx
- */
 public class LevelData { 
 	static String[] Level1 = new String[]{
 			"TTTTTTTTDTTDTTTTTTTT",
@@ -24,7 +20,38 @@ public class LevelData {
 			"TTTTTTTTTEETTTTTTTTT"
 		};
 	
+	static String[] Level2 = new String[]{
+        "TTTTTTTTTTTTTTTTTTTT",
+        "T000000000000000000T",
+        "T0000RRD000DLLL0000T",
+        "T0000U0D000D00U0000T",
+        "T0000U0D000D00U0000T",
+        "RRRRRU0D000D00ULLLLL",
+        "T000000D000D0000000T",
+        "T000000D000D0000000T",
+        "T00DLLLL000RRRRD000T",
+        "T00D00000000000D000T",
+        "T00D00000000000D000T",
+        "T00D00000000000D000T",
+        "T00RRRRD000DLLLL000T",
+        "T000000D000D0000000T",
+        "T000000D000D0000000T",
+        "TTTTTTTETTTETTTTTTTT"
+    };
+	
 	public static String[][] levels = new String[][]{
-		Level1
+		Level1, Level2
+	};
+	
+	public static int[] startCoordinates_1 = new int[]{
+	    8, 0, 11, 0
+	};
+	
+	public static int[] startCoordinates_2 = new int[]{
+        0, 5, 19, 5
+    };
+	
+	public static int[][] startCoordinates = new int[][]{
+	  startCoordinates_1, startCoordinates_2
 	};
 }

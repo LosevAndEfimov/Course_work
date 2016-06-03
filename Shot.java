@@ -1,4 +1,4 @@
-package application;
+package com.gluonapplication;
 
 import javafx.animation.PathTransition;
 import javafx.event.ActionEvent;
@@ -10,54 +10,37 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.util.Duration;
 
-/**
- * Класс, описывающий выстрел вышки
- * 
- * @author pixxx
- */
 public class Shot extends Circle {
-  /** Цель выстрела */
   Enemy Target;
 
-  /** Стартовые координаты выстрела */
   double startX;
   double startY;
 
-  /** Путь выстрела и его анимация */
   Path ShotPath;
   PathTransition animation;
-
-  /**
-   * Метод, создающий выстрел с заданными параметрами
-   * 
-   * @param Target - Цель выстрела
-   * @param startX - Стартовая координата X
-   * @param startY - Стартовая координата Y
-   */
+  
   public Shot(Enemy Target, double startX, double startY) {
     this.Target = Target;
     this.startX = startX;
     this.startY = startY;
     this.setCenterX(startX);
     this.setCenterY(startY);
-    this.setRadius(5);
-    Main.gameRoot.getChildren().add(this);
-    // Задание пути выстрела - откуда и куда; Задание его анимации
+    double temp = 5*GluonApplication.RESOLUTION_X / GluonApplication.BASE_RESOLUTION_X;
+    this.setRadius(temp);
+    GluonApplication.gameRoot.getChildren().add(this);
     ShotPath = new Path(new MoveTo(startX, startY));
     ShotPath.getElements()
-        .add(new LineTo(Target.posX + Target.width / 2, Target.posY + Target.height / 2));
+        .add(new LineTo(Target.posX + Target.sizeWidth / 2, Target.posY + Target.sizeHeight / 2));
     animation = new PathTransition(Duration.millis(200), ShotPath, this);
     animation.play();
-    // При попадании в цель
     animation.setOnFinished(new EventHandler<ActionEvent>() {
       @Override
       public void handle(ActionEvent actionEvent) {
         PathTransition finishedAnimation = (PathTransition) actionEvent.getSource();
         Shot finishedShot = (Shot) finishedAnimation.getNode();
-        // Удаление выстрела из Root-а и получение целью урона
         finishedShot.setVisible(false);
         Target.GetDamage(20);
-        Main.gameRoot.getChildren().remove(finishedShot);
+        GluonApplication.gameRoot.getChildren().remove(finishedShot);
       }
     });
   }

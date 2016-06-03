@@ -1,4 +1,4 @@
-package application;
+package com.gluonapplication;
 
 import java.util.ArrayList;
 
@@ -10,97 +10,61 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.util.Duration;
 
-/**
- * Класс, описывающий движок игры
- * 
- * @author pixxx
- */
 public class GameRoot extends Pane {
-  /** Маестро, музыку! */
-  MusicContainer GameSound;
-
-  /** Имеющиеся на карте Спаунеры */
   Spawner[] Spawn = new Spawner[2];
-
-  /** Вышки, добавленные на карту */
-  ArrayList<Tower> Towers;
-
-  /** Режим игры: автоматический(Auto) или обычный(Normal) */
+  ArrayList<Tower> Towers = new ArrayList<Tower>();
   static String GameMode;
+  int gameOver = 10;
+  AnimationTimer timer;
+  int startPull = 40;
+  int killIterator = 0;
 
-  /** Бот для автоматического режима */
-  Bot bot;
-
-  /**
-   * Метод подготавливает Root и музыку
-   * 
-   * @param path - Путь к аудиофайлу
-   */
   public GameRoot(String path) {
     Towers = new ArrayList<Tower>();
     this.setVisible(false);
-    GameSound = new MusicContainer(path); // Маестро, музыку
-    // GameSound.mediaPlayer.setVolume(0.4);
-    getChildren().add(GameSound.mediaView);
   }
 
-  /**
-   * Метод, реализующий логику игры
-   */
   public void StartGame() {
-    CreateMap();
-    GameSound.mediaPlayer.play();
-    Spawn[0] = new Spawner(30, 8 * Main.BLOCK_SIZE + 9, 0);
-    Spawn[1] = new Spawner(30, 11 * Main.BLOCK_SIZE + 9, 0);
-    if (GameMode == "Auto")
-      bot = new Bot();
-    /** Описание таймера */
+    Spawn[0] = new Spawner(startPull,
+        LevelData.startCoordinates[GluonApplication.mapNumber][0] * GluonApplication.BLOCK_SIZE_X
+            + ((GluonApplication.BLOCK_SIZE_X - Enemy.sizeWidth) / 2),
+        LevelData.startCoordinates[GluonApplication.mapNumber][1] * GluonApplication.BLOCK_SIZE_Y
+        + (GluonApplication.BLOCK_SIZE_Y - Enemy.sizeHeight) / 2);
+    Spawn[1] = new Spawner(startPull,
+        LevelData.startCoordinates[GluonApplication.mapNumber][2] * GluonApplication.BLOCK_SIZE_X
+            + ((GluonApplication.BLOCK_SIZE_X - Enemy.sizeWidth) / 2),
+        LevelData.startCoordinates[GluonApplication.mapNumber][3] * GluonApplication.BLOCK_SIZE_Y
+        + (GluonApplication.BLOCK_SIZE_Y - Enemy.sizeHeight) / 2);
     final LongProperty CheckForShootTimer = new SimpleLongProperty();
     final LongProperty FrameTimer = new SimpleLongProperty(0);
-    AnimationTimer timer = new AnimationTimer() {
+    timer = new AnimationTimer() {
       long EveryTick = 0;
       long EveryTickForBot = 0;
 
       @Override
       public void handle(long now) {
         EveryTick++;
-        // 55 тиков ~= 1 сек
-        if (EveryTick > 55) {// !
+        if (EveryTick > 55) {
           EveryTick = 0;
           if (Spawn[0].iterator < Spawn[0].count)
             Spawn[0].CreateMonster();
           if (Spawn[1].iterator < Spawn[1].count)
             Spawn[1].CreateMonster();
-          /*
-           * if (Main.connectionType == "Client") { Main.client.recieve(); }
-           */
         }
-        if (GameMode == "Auto") {
-          EveryTickForBot++;
-          // 165 тиков ~= 3 сек
-          if (EveryTickForBot > 165) {
-            EveryTickForBot = 0;
-            if (bot.Iterator < bot.Count)
-              bot.createTower();
-          }
-        }
-        // Проверка на выстрелы вышек с интервалом 0.1
         if (now / 100000000 != CheckForShootTimer.get()) {
-          if (Main.connectionType == "Client") {
-            Thread thread_1 = new Thread(Main.client);
+          if (GluonApplication.connectionType == "Client") {
+            Thread thread_1 = new Thread(GluonApplication.client);
             thread_1.start();
           }
-          if (Main.connectionType == "Server") {
-            Thread thread_2 = new Thread(Main.server);
+          if (GluonApplication.connectionType == "Server") {
+            Thread thread_2 = new Thread(GluonApplication.server);
             thread_2.start();
           }
           CheckForShooting();
-          // Уменьшение Cooldown-а каждой вышки
           for (int i = 0; i < Towers.size(); i++) {
             Towers.get(i).TimeToShoot -= 0.1;
           }
         }
-        // Обновление местоположения монстров с интервалом 0.01 сек
         if (now / 10000000 != FrameTimer.get()) {
           Spawn[0].update();
           Spawn[1].update();
@@ -110,68 +74,54 @@ public class GameRoot extends Pane {
       }
     };
     timer.start();
-    // Описание анимации плавного появления и исчезновения главного меню
-    FadeTransition FT_Menu = new FadeTransition(Duration.seconds(1), Main.menu);
+    FadeTransition FT_Menu = new FadeTransition(Duration.seconds(1), GluonApplication.menu);
     FT_Menu.setFromValue(0);
     FT_Menu.setToValue(1);
     FadeTransition FT_FromGame = new FadeTransition(Duration.seconds(0.5), this);
     FT_FromGame.setFromValue(0);
     FT_FromGame.setToValue(1);
-    // Обработчик нажатия ESC в процессе игры
-    Main.scene.setOnKeyPressed(event -> {
-      if ((event.getCode() == KeyCode.ESCAPE) && (!Main.menu.isVisible())) {
+    GluonApplication.scene.setOnKeyPressed(event -> {
+      if ((event.getCode() == KeyCode.ESCAPE) && (!GluonApplication.menu.isVisible())) {
         timer.stop();
-        this.GameSound.mediaPlayer.pause();
-        Main.menu.MenuSound.mediaPlayer.play();
         FT_Menu.play();
         this.setVisible(false);
-        Main.menu.setVisible(true);
-      }
-      // Обработчик нажатия ESC в процессе игры
-      else if ((event.getCode() == KeyCode.ESCAPE) && (Main.menu.isVisible())) {
-        // Затухание
+        GluonApplication.menu.setVisible(true);
+      } else if ((event.getCode() == KeyCode.ESCAPE) && (GluonApplication.menu.isVisible())) {
         timer.start();
         FT_FromGame.play();
         this.setVisible(true);
-        Main.menu.setVisible(false);
-        this.GameSound.mediaPlayer.play();
-        Main.menu.MenuSound.mediaPlayer.pause();
+        GluonApplication.menu.setVisible(false);
       }
     });
   }
 
-  /**
-   * Метод прорисовывает карту по матрице
-   * 
-   * @see LevelData
-   */
-  public void CreateMap() {
-    for (int i = 0; i < LevelData.levels[0].length; i++) {
-      String line = LevelData.levels[0][i];
+  public void CreateMap(int number) {
+    for (int i = 0; i < LevelData.levels[number].length; i++) {
+      String line = LevelData.levels[number][i];
       for (int j = 0; j < line.length(); j++) {
         switch (line.charAt(j)) {
           case 'T':
-            Block tree = new Block(Block.BlockType.Tree, j * Main.BLOCK_SIZE, i * Main.BLOCK_SIZE);
+            Block tree = new Block(Block.BlockType.Tree, j * GluonApplication.BLOCK_SIZE_X,
+                i * GluonApplication.BLOCK_SIZE_Y);
             break;
           case '0':
-            Block grass =
-                new Block(Block.BlockType.Grass, j * Main.BLOCK_SIZE, i * Main.BLOCK_SIZE);
+            Block grass = new Block(Block.BlockType.Grass, j * GluonApplication.BLOCK_SIZE_X,
+                i * GluonApplication.BLOCK_SIZE_Y);
             break;
           default:
-            Block road = new Block(Block.BlockType.Road, j * Main.BLOCK_SIZE, i * Main.BLOCK_SIZE);
+            Block road = new Block(Block.BlockType.Road, j * GluonApplication.BLOCK_SIZE_X,
+                i * GluonApplication.BLOCK_SIZE_Y);
             break;
         }
       }
     }
   }
 
-  /** Метод, реализующий поиск целей и генерации выстрела */
   public void CheckForShooting() {
     int SpawnersCount = 2;
     for (int i = 0; i < SpawnersCount; i++) {
       for (int j = 0; j < Spawn[i].enemies.size(); j++) {
         if (Spawn[i].enemies.get(j).Health <= 0) {
-          // Spawn[i].enemies.remove(j);
           continue;
         }
         for (int k = 0; k < Towers.size(); k++) {
@@ -179,17 +129,13 @@ public class GameRoot extends Pane {
           double EnemyPosY = Spawn[i].enemies.get(j).getTranslateY();
           double TowerPosX = Towers.get(k).getTranslateX();
           double TowerPosY = Towers.get(k).getTranslateY();
-          // Условие проверки на Cooldown
           if (Spawn[i].enemies.get(j).Health > 0) {
             if (Towers.get(k).TimeToShoot <= 0) {
-              // Проверка на дальность выстрела
               if (Math.pow(Math.pow(EnemyPosX - TowerPosX, 2) + Math.pow(EnemyPosY - TowerPosY, 2),
                   0.5) < Towers.get(k).attackRange) {
-                // Установка Cooldown
                 Towers.get(k).TimeToShoot = Towers.get(k).ShootCooldown;
-                // Создание выстрела
                 Towers.get(k).Shots = new Shot(Spawn[i].enemies.get(j),
-                    Towers.get(k).posX + Main.BLOCK_SIZE / 2, Towers.get(k).posY);
+                    Towers.get(k).posX + GluonApplication.BLOCK_SIZE_X / 2, Towers.get(k).posY);
               }
             }
           }

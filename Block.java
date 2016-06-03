@@ -1,4 +1,4 @@
-package application;
+package com.gluonapplication;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -6,37 +6,26 @@ import javafx.scene.layout.Pane;
 import javafx.scene.shape.Line;
 
 /**
- * Класс описывает блок размером Main.BLOCK_SIZE и отвечает за его отображение
  * 
  * @author pixxx
  */
 public class Block extends Pane {
   ImageView block;
 
-  /** Текстура травы */
-  Image img_grass = new Image(getClass().getResourceAsStream("grass.jpg"));
+  Image img_grass = new Image(getClass().getResourceAsStream("/grass.jpg"));
 
-  /** Текстура дерева */
-  Image img_tree = new Image(getClass().getResourceAsStream("tree.png"));
+  Image img_tree = new Image(getClass().getResourceAsStream("/tree.png"));
 
-  /** Текстура дороги */
-  Image img_road = new Image(getClass().getResourceAsStream("road.jpg"));
+  Image img_road = new Image(getClass().getResourceAsStream("/road.jpg"));
 
   public enum BlockType {
     Grass, Tree, Road;
   }
 
-  /**
-   * Создает блок с заданными параметрами
-   * 
-   * @param type - Тип блока(Трава, дерево, дорога)
-   * @param x - Координата X
-   * @param y - Координата Y
-   */
   public Block(BlockType type, int x, int y) {
     block = new ImageView();
-    block.setFitHeight(Main.BLOCK_SIZE);
-    block.setFitWidth(Main.BLOCK_SIZE);
+    block.setFitHeight(GluonApplication.BLOCK_SIZE_Y);
+    block.setFitWidth(GluonApplication.BLOCK_SIZE_X);
     setTranslateX(x);
     setTranslateY(y);
     switch (type) {
@@ -45,40 +34,45 @@ public class Block extends Pane {
         break;
       case Grass:
         block.setImage(img_grass);
-        Line line1 = new Line(x, y, x + Main.BLOCK_SIZE, y);
-        Line line2 = new Line(x + Main.BLOCK_SIZE, y, x + Main.BLOCK_SIZE, y + Main.BLOCK_SIZE);
-        Line line3 = new Line(x + Main.BLOCK_SIZE, y + Main.BLOCK_SIZE, x, y + Main.BLOCK_SIZE);
-        Line line4 = new Line(x, y + Main.BLOCK_SIZE, x, y);
-        /** Выделение блока при наведении */
+        Line line1 = new Line(x, y, x + GluonApplication.BLOCK_SIZE_X, y);
+        Line line2 = new Line(x + GluonApplication.BLOCK_SIZE_X, y,
+            x + GluonApplication.BLOCK_SIZE_X, y + GluonApplication.BLOCK_SIZE_Y);
+        Line line3 = new Line(x + GluonApplication.BLOCK_SIZE_X, y + GluonApplication.BLOCK_SIZE_Y,
+            x, y + GluonApplication.BLOCK_SIZE_Y);
+        Line line4 = new Line(x, y + GluonApplication.BLOCK_SIZE_Y, x, y);
         this.setOnMouseEntered(event -> {
-          Main.gameRoot.getChildren().addAll(line1, line2, line3, line4);
+          GluonApplication.gameRoot.getChildren().addAll(line1, line2, line3, line4);
         });
-        /** Снятие выделения с блока */
         this.setOnMouseExited(event -> {
-          Main.gameRoot.getChildren().removeAll(line1, line2, line3, line4);
+          GluonApplication.gameRoot.getChildren().removeAll(line1, line2, line3, line4);
         });
-        /** Ставить Tower по клику на блок */
-        if (Main.gameRoot.GameMode == "Normal") {
-          this.setOnMouseClicked(event -> {
-            if (Main.connectionType == "Server"){
-                System.out.println(x + " " + y);
-                Main.server.sendCoordinates(x, y);
-            }
-            if (Main.connectionType == "Client"){
-              System.out.println(x + " " + y);
-              Main.client.sendCoordinates(x, y);
+        this.setOnMouseClicked(event -> {
+          Image img;
+          if (GluonApplication.connectionType == "Server") {
+            System.out.println(x + " " + y);
+            GluonApplication.server.sendCoordinates(x, y);
+            img = new Image(getClass().getResourceAsStream("/Tower_Server.png"),
+                GluonApplication.BLOCK_SIZE_X, GluonApplication.BLOCK_SIZE_Y, false, true);
+          } else if (GluonApplication.connectionType == "Client") {
+            System.out.println(x + " " + y);
+            GluonApplication.client.sendCoordinates(x, y);
+            img = new Image(getClass().getResourceAsStream("/Tower_Client.png"),
+                GluonApplication.BLOCK_SIZE_X, GluonApplication.BLOCK_SIZE_Y, false, true);
+          } else {
+            img = new Image(getClass().getResourceAsStream("/Tower.png"),
+                GluonApplication.BLOCK_SIZE_X, GluonApplication.BLOCK_SIZE_Y, false, true);
           }
-            Tower tower = new Tower(x, y, 150);
-            Main.gameRoot.Towers.add(tower);
-          });
-        }
+          Tower tower = new Tower(x, y,
+              (double) GluonApplication.RESOLUTION_X * 150 / GluonApplication.BASE_RESOLUTION_X,
+              img);
+          GluonApplication.gameRoot.Towers.add(tower);
+        });
         break;
       case Road:
         block.setImage(img_road);
         break;
     }
-    /** Добавление блока на Root */
     getChildren().add(block);
-    Main.gameRoot.getChildren().add(this);
+    GluonApplication.gameRoot.getChildren().add(this);
   }
 }

@@ -1,126 +1,128 @@
-package application;
+package com.gluonapplication;
 
+import javafx.animation.FadeTransition;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.util.Duration;
 
-/**
- * Класс описывает монстра и его движение и отвечает за его отображение
- * 
- * @author pixxx
- */
 public class Enemy extends Pane {
   ImageView imageView;
-
-  /** Положение монстра */
   public double posX;
   public double posY;
-
-  /** Предыдущий блок, на котором был монстр (необходимо для правильного передвижения) */
   char PrevBlock = 'N';
 
   int Health = 100;
-  int width = 32;
-  int height = 32;
+  static int imageWidth = 32;
+  static int imageHeight = 32;
+  static int sizeWidth = (int) (GluonApplication.BLOCK_SIZE_X * 0.64);
+  static int sizeHeight = (int) (GluonApplication.BLOCK_SIZE_Y * 0.64);
   int offsetX = 0;
   int offsetY = 0;
   int currentEnemyIndex;
   int currentSpawnIndex;
   SpriteAnimation animation;
 
-  /**
-   * Создает монстра с заданными параметрами
-   * 
-   * @param posX - Начальная позиция по X
-   * @param posY - Начальная позиция по Y
-   * @param count - Параметр для спрайтовой анимации
-   * @param columns - Параметр для спрайтовой анимации
-   */
-  public Enemy(int posX, int posY, int count, int columns, int spawnIndex, int enemyIndex) {
+  public Enemy(double posX, double posY, int count, int columns, int spawnIndex, int enemyIndex) {
     currentSpawnIndex = spawnIndex;
     currentEnemyIndex = enemyIndex;
-    Image img = new Image(getClass().getResourceAsStream("enemy.png"));
+    Image img = new Image(getClass().getResourceAsStream("/enemy.png"));
     this.imageView = new ImageView(img);
-    this.imageView.setViewport(new Rectangle2D(offsetX, offsetY, width, height));
+    this.imageView.setFitWidth(sizeWidth);
+    this.imageView.setFitHeight(sizeHeight);
+    this.imageView.setViewport(new Rectangle2D(offsetX, offsetY, imageWidth, imageHeight));
     animation = new SpriteAnimation(imageView, Duration.millis(200), count, columns, offsetX,
-        offsetY, width, height);
+        offsetY, imageWidth, imageHeight);
     this.posX = posX;
     this.posY = posY;
     this.setTranslateX(posX);
     this.setTranslateY(posY);
     getChildren().add(imageView);
-    Main.gameRoot.getChildren().add(this);
+    GluonApplication.gameRoot.getChildren().add(this);
   }
 
-  /**
-   * Метод, отвечающий за передвижение монстра по X
-   * 
-   * @param x - На сколько сдвигать монстра
-   */
   public void moveX(double x) {
     boolean right = true;
     if (x < 0)
       right = false;
     for (int i = 0; i < Math.abs(x); i++) {
       if (right) {
-        this.setTranslateX(this.getTranslateX() + 1);
-        posX += 1;
+        this.setTranslateX(this.getTranslateX() + x);
+        posX += x;
       } else {
-        this.setTranslateX(this.getTranslateX() - 1);
-        posX -= 1;
+        this.setTranslateX(this.getTranslateX() + x);
+        posX += x;
       }
     }
   }
 
-  /**
-   * Метод, отвечающий за передвижение монстра по Y
-   * 
-   * @param y - На сколько сдвигать монстра
-   */
   public void moveY(double y) {
     boolean down = true;
     if (y < 0)
       down = false;
     for (int i = 0; i < Math.abs(y); i++) {
       if (down) {
-        this.setTranslateY(this.getTranslateY() + 1);
-        posY += 1;
+        this.setTranslateY(this.getTranslateY() + y);
+        posY += y;
       } else {
-        this.setTranslateY(this.getTranslateY() - 1);
-        posY -= 1;
+        this.setTranslateY(this.getTranslateY() + y);
+        posY += y;
       }
     }
   }
 
-  /**
-   * Метод, убирающий цель с карты, если она дошла до конца
-   */
   public void EnemyGoalRiched() {
     Health = 0;
+    if (this.isVisible())GluonApplication.gameRoot.killIterator++;
     this.setVisible(false);
-    Main.gameRoot.getChildren().remove(this);
+    FadeTransition FT_Menu = new FadeTransition(Duration.seconds(1), GluonApplication.menu);
+    FT_Menu.setFromValue(0);
+    FT_Menu.setToValue(1);
+    GluonApplication.gameRoot.getChildren().remove(this);
+    if (GluonApplication.gameRoot.killIterator >= GluonApplication.gameRoot.Spawn.length * GluonApplication.gameRoot.startPull){
+      GluonApplication.gameRoot.timer.stop();
+      FT_Menu.play();
+      GluonApplication.menu.menuBox.ChangeText("Win!");
+      GluonApplication.menu.setVisible(true);
+      GluonApplication.gameRoot.setVisible(false);
+    }
     this.animation.stop();
+    GluonApplication.gameRoot.gameOver--;
+    if (GluonApplication.gameRoot.gameOver <= 0){
+      GluonApplication.gameRoot.timer.stop();
+      FT_Menu.play();
+      GluonApplication.menu.menuBox.ChangeText("GameOver");
+      GluonApplication.menu.setVisible(true);
+      GluonApplication.gameRoot.setVisible(false);
+    }
   }
 
-  /**
-   * Метод отвечает за получение урона от вышек
-   * 
-   * @param Damage - Кол-во полученного урона
-   */
   public void GetDamage(int Damage) {
-    if (Health < 0) return;
+    FadeTransition FT_Menu = new FadeTransition(Duration.seconds(1), GluonApplication.menu);
+    FT_Menu.setFromValue(0);
+    FT_Menu.setToValue(1);
+    if (Health < 0)
+      return;
     Health = Health - Damage;
     if (Health <= 0) {
-      if (Main.connectionType == "Server") {
-        Main.server.sendKillCreep(currentSpawnIndex, currentEnemyIndex);
+      if (GluonApplication.connectionType == "Server") {
+        GluonApplication.server.sendKillCreep(currentSpawnIndex, currentEnemyIndex);
       }
-      if (Main.connectionType == "Client") {
-        Main.client.sendKillCreep(currentSpawnIndex, currentEnemyIndex);
+      if (GluonApplication.connectionType == "Client") {
+        GluonApplication.client.sendKillCreep(currentSpawnIndex, currentEnemyIndex);
       }
+      if (this.isVisible()) GluonApplication.gameRoot.killIterator++;
       this.setVisible(false);
-      Main.gameRoot.getChildren().remove(this);
+      GluonApplication.gameRoot.getChildren().remove(this);
+      System.out.println(GluonApplication.gameRoot.Spawn.length * GluonApplication.gameRoot.startPull + " " + GluonApplication.gameRoot.killIterator);
+      if (GluonApplication.gameRoot.killIterator >= GluonApplication.gameRoot.Spawn.length * GluonApplication.gameRoot.startPull){
+        GluonApplication.gameRoot.timer.stop();
+        FT_Menu.play();
+        GluonApplication.menu.menuBox.ChangeText("Win!");
+        GluonApplication.menu.setVisible(true);
+        GluonApplication.gameRoot.setVisible(false);
+      }
       this.animation.stop();
     }
   }

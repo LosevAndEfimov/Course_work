@@ -16,6 +16,10 @@ public class Main extends Application {
   public static final int BLOCK_SIZE = 50;
   public static final int RESOLUTION_X = 1000;
   public static final int RESOLUTION_Y = 800;
+<<<<<<< HEAD
+=======
+
+>>>>>>> ff06d166cd1817378e54935ef818335307b5dcf4
   /** —цены и Root-ы */
   static GameRoot gameRoot;
   static Menu menu;
@@ -34,6 +38,16 @@ public class Main extends Application {
 
   @Override
   public void start(Stage primaryStage) {
+<<<<<<< HEAD
+=======
+    connectionType = "Client";
+    if (connectionType == "Server") {
+      server = new Server();
+    }
+    if (connectionType == "Client") {
+      client = new Client();
+    }
+>>>>>>> ff06d166cd1817378e54935ef818335307b5dcf4
     menu = new Menu("menu.mp3");
     gameRoot = new GameRoot("wave1.mp3");
     scene = new Scene(All, RESOLUTION_X, RESOLUTION_Y);

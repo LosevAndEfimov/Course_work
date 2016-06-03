@@ -1,9 +1,12 @@
-package application;
+package com.gluonapplication;
 
 import java.io.*;
 import java.net.*;
 
+import javafx.animation.FadeTransition;
 import javafx.application.Platform;
+import javafx.scene.image.Image;
+import javafx.util.Duration;
 
 public class Server implements Runnable {
 
@@ -15,9 +18,9 @@ public class Server implements Runnable {
   public Server() {
     System.out.println("Welcome to Server side");
     try {
-      servers = new ServerSocket(3333);
+      servers = new ServerSocket(2434);
     } catch (IOException e) {
-      System.out.println("Couldn't listen to port 3333");
+      System.out.println("Couldn't listen to port 2434");
       System.exit(-1);
     }
     try {
@@ -43,7 +46,8 @@ public class Server implements Runnable {
   void sendCoordinates(int x, int y) {
     String output;
 
-    output = Integer.toString(x) + " " + Integer.toString(y);
+    output = Integer.toString(x / GluonApplication.BLOCK_SIZE_X) + " "
+        + Integer.toString(y / GluonApplication.BLOCK_SIZE_Y);
     out.println(output);
   }
 
@@ -58,6 +62,11 @@ public class Server implements Runnable {
     String output = "serverIsReady";
     out.println(output);
   }
+  
+  void sendMapNumber(){
+    String output = "mapNumber " + GluonApplication.mapNumber;
+    out.println(output);
+  }
 
   void recieve() {
     String Body = null;
@@ -66,31 +75,48 @@ public class Server implements Runnable {
       Body = in.readLine();
       if (Body.isEmpty())
         return;
-      System.out.println(Body);
     } catch (IOException e) {
       e.printStackTrace();
     }
-    if (!Body.isEmpty()) {
-      if (Body.equals("clientIsReady")) {
-        Main.menu.clientIsReady = true;
-        return;
-      }
 
-      ArrayBody = Body.split(" ");
+    if (Body.equals("clientIsReady")) {
+      GluonApplication.menu.clientIsReady = true;
+      return;
+    }
 
-      if (ArrayBody[0].equals("kill")) {
-        int killSpawnIndex = Integer.parseInt(ArrayBody[1]);
-        int killEnemyIndex = Integer.parseInt(ArrayBody[2]);
-        Enemy temp = Main.gameRoot.Spawn[killSpawnIndex].enemies.get(killEnemyIndex);
+    ArrayBody = Body.split(" ");
+
+    if (ArrayBody[0].equals("kill")) {
+      int killSpawnIndex = Integer.parseInt(ArrayBody[1]);
+      int killEnemyIndex = Integer.parseInt(ArrayBody[2]);
+      if (GluonApplication.gameRoot.Spawn[killSpawnIndex].enemies.size() > killEnemyIndex) {
+        Enemy temp = GluonApplication.gameRoot.Spawn[killSpawnIndex].enemies.get(killEnemyIndex);
+        if (temp.isVisible()) GluonApplication.gameRoot.killIterator++;
+        
+        if (GluonApplication.gameRoot.killIterator >= GluonApplication.gameRoot.Spawn.length * GluonApplication.gameRoot.startPull){
+          FadeTransition FT_Menu = new FadeTransition(Duration.seconds(1), GluonApplication.menu);
+          FT_Menu.setFromValue(0);
+          FT_Menu.setToValue(1);
+          GluonApplication.gameRoot.timer.stop();
+          FT_Menu.play();
+          GluonApplication.menu.menuBox.ChangeText("Win!");
+          GluonApplication.menu.setVisible(true);
+          GluonApplication.gameRoot.setVisible(false);
+        }
+        
         temp.setVisible(false);
         temp.Health = -10;
-        Platform.runLater(()->Main.gameRoot.getChildren().remove(temp));
+        Platform.runLater(() -> GluonApplication.gameRoot.getChildren().remove(temp));
         temp.animation.stop();
-      } else {
-        int coordX = Integer.parseInt(ArrayBody[0]);
-        int coordY = Integer.parseInt(ArrayBody[1]);
-        Platform.runLater(() -> Main.gameRoot.Towers.add(new Tower(coordX, coordY, 150)));
       }
+    } else {
+      int coordX = Integer.parseInt(ArrayBody[0]);
+      int coordY = Integer.parseInt(ArrayBody[1]);
+      Image img = new Image(getClass().getResourceAsStream("/Tower_Client.png"),
+          GluonApplication.BLOCK_SIZE_X, GluonApplication.BLOCK_SIZE_Y, false, true);
+      Platform.runLater(() -> GluonApplication.gameRoot.Towers.add(new Tower(
+          coordX * GluonApplication.BLOCK_SIZE_X, coordY * GluonApplication.BLOCK_SIZE_Y,
+          (double) GluonApplication.RESOLUTION_X * 150 / GluonApplication.BASE_RESOLUTION_X, img)));
     }
   }
 
